@@ -1,10 +1,17 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from functools import lru_cache
 from pathlib import Path
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @field_validator("database_url", "upstash_redis_rest_url", "upstash_redis_rest_token", "redis_url", mode="before")
+    def clean_str_inputs(cls, v):
+        if isinstance(v, str):
+            return v.strip().strip("'").strip('"').strip()
+        return v
 
     # App
     app_name: str = "MANAS"

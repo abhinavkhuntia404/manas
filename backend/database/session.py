@@ -11,16 +11,17 @@ from configs.settings import get_settings
 
 settings = get_settings()
 
-is_sqlite = settings.database_url.startswith("sqlite")
+raw_url = str(settings.database_url).strip().strip("'").strip('"').strip()
+is_sqlite = raw_url.startswith("sqlite")
 
 if is_sqlite:
     # Ensure parent directory exists for SQLite database file
-    db_path = settings.database_url.replace("sqlite:///", "")
+    db_path = raw_url.replace("sqlite:///", "")
     if db_path and not db_path.startswith(":memory:"):
         os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
 
     engine = create_engine(
-        settings.database_url,
+        raw_url,
         connect_args={"check_same_thread": False},
         echo=settings.debug,
     )
@@ -31,7 +32,7 @@ if is_sqlite:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 else:
-    db_url = settings.database_url
+    db_url = raw_url
     if db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
