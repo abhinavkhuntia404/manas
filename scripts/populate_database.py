@@ -37,6 +37,7 @@ def populate_all():
             atlas_ingester.run()
         except Exception as e:
             print(f"  Note: Atlas ontology step encountered: {e}")
+            db.rollback()
 
         # 3. OASIS-1 and OASIS-2
         print("[3/5] Ingesting OASIS datasets...")

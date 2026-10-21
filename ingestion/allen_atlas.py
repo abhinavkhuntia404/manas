@@ -78,21 +78,24 @@ class AllenAtlasIngester:
         depth: int,
         count: list,
     ):
-        for node in children:
-            # Check if already exists
-            existing = self.db.query(BrainRegion).filter(
-                BrainRegion.atlas_id == atlas_id,
-                BrainRegion.source_region_id == str(node.get("id", "")),
-            ).first()
+        if not hasattr(self, "_existing_cache"):
+            self._existing_cache = {
+                str(r[0]): r[1]
+                for r in self.db.query(BrainRegion.source_region_id, BrainRegion.region_id)
+                .filter(BrainRegion.atlas_id == atlas_id)
+                .all()
+            }
 
-            if existing:
-                region_id = existing.region_id
+        for node in children:
+            source_id = str(node.get("id", ""))
+            if source_id in self._existing_cache:
+                region_id = self._existing_cache[source_id]
             else:
                 name = node.get("name", "Unknown")
                 acronym = node.get("acronym", "")
                 region = BrainRegion(
                     atlas_id=atlas_id,
-                    source_region_id=str(node.get("id", "")),
+                    source_region_id=source_id,
                     name=name,
                     abbreviation=acronym,
                     hemisphere="bilateral",    # ARA is bilateral by default
@@ -105,7 +108,10 @@ class AllenAtlasIngester:
                 self.db.add(region)
                 self.db.flush()
                 region_id = region.region_id
+                self._existing_cache[source_id] = region_id
                 count[0] += 1
+                if count[0] % 50 == 0:
+                    self.db.commit()
 
             sub_children = node.get("children", [])
             if sub_children:
