@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: manas_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: manas
+      POSTGRES_PASSWORD: manas_dev_password
+      POSTGRES_DB: manas
+    ports:
+      - "5432:5432"
+    volumes:
+      - manas_pgdata:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U manas -d manas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: manas_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://manas:manas_dev_password@db:5432/manas
+      DATA_DIR: /app/data
+      ENVIRONMENT: development
+    volumes:
+      - ./data:/app/data
+      - ./ingestion:/app/ingestion
+      - ./validation:/app/validation
+      - ./preprocessing:/app/preprocessing
+      - ./atlas:/app/atlas
+      - ./analysis:/app/analysis
+      - ./feature_engineering:/app/feature_engineering
+      - ./literature:/app/literature
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    container_name: manas_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    command: npm run dev
+
+volumes:
+  manas_pgdata:
