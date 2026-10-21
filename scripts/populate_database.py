@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from datetime import datetime
 from backend.database.session import SessionLocal, create_tables
-from backend.models.orm import Dataset, DatasetVersion, AnalysisRun, MeasurementType
+from backend.models.orm import Dataset, DatasetVersion, AnalysisRun, MeasurementType, Subject
 from atlas.region_mapper import RegionMapper
 from ingestion.allen_atlas import AllenAtlasIngester
 from ingestion.oasis import OasisIngester
