@@ -70,6 +70,7 @@ def populate_all():
             db.add(v1)
             db.commit()
             db.refresh(v1)
+        if db.query(Subject).filter(Subject.version_id == v1.version_id).count() == 0:
             OasisIngester(db, v1.version_id, oasis_version="OASIS-1").run()
 
         # OASIS-2
@@ -101,6 +102,7 @@ def populate_all():
             db.add(v2)
             db.commit()
             db.refresh(v2)
+        if db.query(Subject).filter(Subject.version_id == v2.version_id).count() == 0:
             OasisIngester(db, v2.version_id, oasis_version="OASIS-2").run()
 
         # 4. Literature and Evidence Claims
