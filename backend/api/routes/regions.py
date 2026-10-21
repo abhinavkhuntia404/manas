@@ -25,6 +25,12 @@ def list_regions(
     page_size: int = Query(50, ge=1, le=500),
 ):
     """List canonical brain regions with optional filtering."""
+    from backend.database.cache import cache_get, cache_set
+    cache_key = f"regions:list:{atlas_id}:{hemisphere}:{category}:{search}:{page}:{page_size}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+
     query = db.query(BrainRegion)
     if atlas_id:
         query = query.filter(BrainRegion.atlas_id == atlas_id)
@@ -38,7 +44,7 @@ def list_regions(
     total = query.count()
     regions = query.offset((page - 1) * page_size).limit(page_size).all()
 
-    return {
+    result = {
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -57,6 +63,8 @@ def list_regions(
             for r in regions
         ],
     }
+    cache_set(cache_key, result, ttl_seconds=600)
+    return result
 
 
 @router.get("/{region_id}")
