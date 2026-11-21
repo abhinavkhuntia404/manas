@@ -30,22 +30,38 @@ export default function HomePage() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
           <h1 className="page-title">MANAS &nbsp;<span style={{ fontWeight: 300, color: 'var(--color-text-2)' }}>मनस्</span></h1>
-          <span style={{ fontSize: '0.78rem', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 4, padding: '2px 8px', color: 'var(--color-text-muted)' }}>v1.0</span>
+          <span style={{ fontSize: '0.78rem', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 4, padding: '2px 8px', color: 'var(--color-accent)', fontWeight: 600 }}>v2.0 (Integrated Platform)</span>
         </div>
         <p className="page-subtitle">
-          Computational Neuroscience Research Platform — Integrating publicly available human brain,
+          Computational Neuroscience & Predictive Research Platform — Integrating publicly available human brain,
           molecular, pathological and clinical data to investigate disease-associated regional
-          patterns in Alzheimer&apos;s and Parkinson&apos;s disease.
+          patterns and disease progression in Alzheimer&apos;s and Parkinson&apos;s disease.
         </p>
       </div>
 
-      {/* Research question */}
-      <div className="card" style={{ marginBottom: 24, borderLeft: '3px solid var(--color-accent)' }}>
-        <div className="section-label">Primary Research Question — V1</div>
-        <p style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--color-text)', lineHeight: 1.6 }}>
-          Which brain regions exhibit statistically robust Alzheimer&apos;s-associated differences
-          in public human data, and how reproducible are those patterns?
-        </p>
+      {/* Dual Platform Cards: V1 Research & V2 Predictive */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+        <div className="card" style={{ borderLeft: '3px solid var(--color-accent)' }}>
+          <div className="section-label">V1 / V1.5 — Regional Statistical Analysis</div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text)', lineHeight: 1.5, marginTop: 4 }}>
+            Which brain regions exhibit statistically robust Alzheimer&apos;s-associated differences
+            in public human data, and how reproducible are those patterns?
+          </p>
+          <div style={{ marginTop: 10 }}>
+            <a href="/alzheimers" style={{ fontSize: '0.8rem', color: 'var(--color-accent)', fontWeight: 600 }}>Explore Regional Maps →</a>
+          </div>
+        </div>
+
+        <div className="card" style={{ borderLeft: '3px solid var(--color-pass)' }}>
+          <div className="section-label" style={{ color: 'var(--color-pass)' }}>V2 — Predictive Modeling & Trajectories</div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text)', lineHeight: 1.5, marginTop: 4 }}>
+            Multimodal Alzheimer&apos;s classification, ordinal cognitive-stage estimation, explainable SHAP feature attribution, and longitudinal progression tracking.
+          </p>
+          <div style={{ marginTop: 10, display: 'flex', gap: 12 }}>
+            <a href="/predictions" style={{ fontSize: '0.8rem', color: 'var(--color-accent)', fontWeight: 600 }}>Predictions Workspace →</a>
+            <a href="/model-performance" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Model Evaluation →</a>
+          </div>
+        </div>
       </div>
 
       {/* System status */}

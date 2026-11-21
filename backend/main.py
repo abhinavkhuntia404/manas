@@ -13,7 +13,7 @@ import time
 
 from configs.settings import get_settings
 from backend.api.routes import (
-    datasets, regions, analyses, literature, health, ingestion
+    datasets, regions, analyses, literature, health, ingestion, predictions
 )
 
 from contextlib import asynccontextmanager
@@ -97,6 +97,7 @@ app.include_router(analyses.router, prefix="/api/analyses", tags=["Analyses"])
 app.include_router(analyses.router, prefix="/api/analysis", include_in_schema=False)
 app.include_router(literature.router, prefix="/api/literature", tags=["Literature"])
 app.include_router(ingestion.router, prefix="/api/ingestion", tags=["Ingestion"])
+app.include_router(predictions.router, prefix="/api/predictions", tags=["Predictions (V2)"])
 
 
 

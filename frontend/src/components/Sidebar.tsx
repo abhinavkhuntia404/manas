@@ -30,6 +30,15 @@ const NAV = [
     ],
   },
   {
+    section: 'Predictive Research (V2)',
+    links: [
+      { href: '/predictions', label: 'Predictions Workspace', icon: '⚡' },
+      { href: '/cognitive-staging', label: 'Cognitive Staging', icon: '📊' },
+      { href: '/longitudinal', label: 'Longitudinal Research', icon: '📈' },
+      { href: '/model-performance', label: 'Model Performance', icon: '🎯' },
+    ],
+  },
+  {
     section: 'System',
     links: [
       { href: '/docs', label: 'Documentation', icon: '?' },
@@ -67,8 +76,8 @@ export default function Sidebar() {
 
       <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--color-border)' }}>
         <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
-          MANAS v1.0 · Research Platform<br />
-          Not a medical device.
+          MANAS v2.0 (Predictive Platform)<br />
+          Research Software · Not a medical device.
         </p>
       </div>
     </aside>

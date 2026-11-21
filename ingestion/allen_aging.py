@@ -45,19 +45,45 @@ PROTEIN_PATHOLOGY_URL = (
 )
 
 def map_allen_diagnosis(raw_dx: str, act_demented: str = "") -> str:
+    """Map the source's *etiology* label conservatively.
+
+    ``act_demented`` describes dementia status, not Alzheimer etiology. A
+    donor with vascular, mixed, or another dementia must therefore not be
+    relabelled as Alzheimer disease merely because that field says Dementia.
+    """
     s = str(raw_dx).strip().lower()
-    act = str(act_demented).strip().lower()
-    if "alzheimer" in s:
+    if s in {"alzheimer's disease type", "alzheimer disease", "alzheimer's disease"} or "alzheimer" in s:
         return "AD"
-    if "no dementia" in s or "reference" in s:
+    if s in {"no dementia", "reference", "control", "nondemented"}:
         return "CONTROL"
-    if act == "no dementia":
-        return "CONTROL"
-    if act == "dementia" or "dementia" in s:
-        return "AD"
-    if "multiple" in s or "vascular" in s or "other" in s:
+    if any(term in s for term in ("multiple", "vascular", "other", "unknown")):
         return "OTHER"
+    # Do not infer Alzheimer disease from a generic dementia-status field.
     return "UNKNOWN"
+
+
+def parse_donor_age(value):
+    """Parse Allen donor age, preserving ranges as their midpoint.
+
+    The source ``age`` field can contain values such as ``90-94`` or
+    ``100+``. The midpoint is an approximation and should be treated as such
+    in downstream modelling; age_at_first_tbi is not donor age.
+    """
+    if value is None or pd.isna(value):
+        return None
+    raw = str(value).strip().replace(" ", "")
+    if not raw or raw.lower() in {"nan", "none", "unknown", "n/a"}:
+        return None
+    if re.fullmatch(r"\d+(?:\.\d+)?", raw):
+        return float(raw)
+    match = re.fullmatch(r"(\d+)-(\d+)", raw)
+    if match:
+        low, high = map(float, match.groups())
+        return (low + high) / 2.0
+    match = re.fullmatch(r"(\d+)\+", raw)
+    if match:
+        return float(match.group(1)) + 2.5  # documented lower-bound approximation
+    return None
 
 DIAGNOSIS_MAP = {
     "alzheimer's disease type": "AD",
@@ -208,12 +234,12 @@ class AllenAgingIngester:
             raw_sex = str(row.get("sex", row.get("Sex", "Unknown"))).strip()
             sex = "M" if raw_sex.upper() in ("M", "MALE") else "F" if raw_sex.upper() in ("F", "FEMALE") else "Unknown"
 
-            # Age
-            try:
-                age = float(str(row.get("age_at_first_tbi", row.get("Age", ""))).replace("+", "").strip())
-            except (ValueError, TypeError):
-                age = None
-                self._warn(f"Age could not be parsed for donor {src_id}")
+            # Use donor age, never age_at_first_tbi (which is a different event).
+            # Age bands are represented by their midpoint; this approximation
+            # must be documented in model metadata and sensitivity analyses.
+            age = parse_donor_age(row.get("age", row.get("Age")))
+            if age is None:
+                self._warn(f"Donor age could not be parsed from source age field for donor {src_id}")
 
             # Check for existing
             existing = (

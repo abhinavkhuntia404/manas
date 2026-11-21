@@ -436,3 +436,60 @@ class ClaimPaper(Base):
 
     claim = relationship("EvidenceClaim", back_populates="claim_links")
     paper = relationship("LiteraturePaper", back_populates="claim_links")
+
+
+# ---------------------------------------------------------------------------
+# MANAS V2 — PREDICTIVE RESEARCH MODELS & INFERENCE
+# ---------------------------------------------------------------------------
+
+class PredictionModelRecord(Base):
+    """Registry of trained predictive models, validation metrics, and features."""
+    __tablename__ = "prediction_models"
+
+    model_id = Column(String(64), primary_key=True)  # e.g., MANAS-ML-AD-CLF-01
+    name = Column(String(256), nullable=False)
+    version = Column(String(64), nullable=False)
+    target_variable = Column(String(128), nullable=False)  # AD_DIAGNOSIS, CDR_STAGE, MMSE_SCORE
+    algorithm = Column(String(128), nullable=False)        # LogisticRegression, GradientBoosting, Ensemble
+    training_dataset = Column(String(256))
+    features = Column(JSON, default=list)
+    hyperparameters = Column(JSON, default=dict)
+    metrics = Column(JSON, default=dict)                   # roc_auc, pr_auc, accuracy, f1, brier_score
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class PredictionInferenceRecord(Base):
+    """Provenance and results of predictive inference queries."""
+    __tablename__ = "prediction_inferences"
+
+    inference_id = Column(String(64), primary_key=True)   # MANAS-PRED-YYYY-NNNNN
+    model_id = Column(String(64), ForeignKey("prediction_models.model_id"), nullable=False)
+    subject_id = Column(Integer, ForeignKey("subjects.subject_id"), nullable=True)
+    input_features = Column(JSON, nullable=False)
+    predicted_class = Column(String(64), nullable=False)
+    prediction_probability = Column(Float, nullable=False)
+    confidence_interval_low = Column(Float)
+    confidence_interval_high = Column(Float)
+    feature_attributions = Column(JSON, default=dict)     # Explainability SHAP/attribution weights
+    risk_tier = Column(String(32))                         # LOW, MODERATE, HIGH, VERY_HIGH
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class LongitudinalTrajectoryRecord(Base):
+    """Longitudinal trajectory modeling for subjects with multi-timepoint visits."""
+    __tablename__ = "longitudinal_trajectories"
+
+    trajectory_id = Column(String(64), primary_key=True)
+    subject_id = Column(Integer, ForeignKey("subjects.subject_id"), nullable=True)
+    source_subject_id = Column(String(256), nullable=False)
+    visits_count = Column(Integer, default=1)
+    baseline_age = Column(Float)
+    follow_up_years = Column(Float)
+    annualized_brain_atrophy_pct = Column(Float)
+    annualized_mmse_change = Column(Float)
+    conversion_status = Column(String(64))                 # STABLE_CONTROL, STABLE_AD, CONVERTED
+    progression_risk_category = Column(String(32))         # SLOW, MODERATE, RAPID
+    trajectory_data = Column(JSON, default=list)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

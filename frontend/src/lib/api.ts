@@ -113,6 +113,180 @@ export interface EvidenceClaim {
   contradicting_papers: LiteraturePaper[];
 }
 
+// ── V2 Predictive Platform Types ──────────────────────────────
+export interface FeatureAttributionItem {
+  feature: string;
+  feature_label: string;
+  value: number | null;
+  importance: number;
+  contribution: number;
+  effect: 'INCREASES_RISK' | 'DECREASES_RISK' | 'NEUTRAL';
+  odds_ratio: number | null;
+}
+
+export interface ClassificationRequest {
+  age?: number | null;
+  sex?: string;
+  mmse?: number | null;
+  cdr?: number | null;
+  nwbv?: number | null;
+  etiv?: number | null;
+  apoe4_carrier?: boolean | null;
+  education_years?: number | null;
+  ihc_at8_ffpe?: number | null;
+  ihc_a_beta_ffpe?: number | null;
+  ptau_ratio?: number | null;
+  model_id?: string;
+}
+
+export interface ClassificationResponse {
+  inference_id: string;
+  model_id: string;
+  predicted_class: 'AD' | 'CONTROL' | 'MCI';
+  predicted_class_label: string;
+  probability: number;
+  confidence_interval_low: number;
+  confidence_interval_high: number;
+  risk_tier: 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH';
+  risk_summary: string;
+  feature_attributions: FeatureAttributionItem[];
+  model_version: string;
+  model_accuracy: number;
+  model_roc_auc: number;
+  disclaimer: string;
+}
+
+export interface CognitiveStagingRequest {
+  age?: number | null;
+  sex?: string;
+  mmse?: number | null;
+  nwbv?: number | null;
+  etiv?: number | null;
+  apoe4_carrier?: boolean | null;
+  composite_pathology_z?: number | null;
+  braak_stage?: string | null;
+}
+
+export interface StageProbability {
+  stage: string;
+  stage_name: string;
+  probability: number;
+  clinical_description: string;
+}
+
+export interface CognitiveStagingResponse {
+  inference_id: string;
+  primary_stage: string;
+  primary_stage_label: string;
+  stage_probabilities: StageProbability[];
+  estimated_mmse: number;
+  estimated_mmse_range: [number, number];
+  braak_anatomical_correlation: string;
+  progression_velocity: string;
+  recommended_monitoring_interval: string;
+}
+
+export interface VisitPoint {
+  visit_id: number;
+  time_days: number;
+  age: number;
+  mmse?: number | null;
+  cdr?: number | null;
+  nwbv?: number | null;
+  etiv?: number | null;
+}
+
+export interface LongitudinalRequest {
+  subject_id?: string;
+  visits: VisitPoint[];
+}
+
+export interface FittedTrajectoryPoint {
+  year: number;
+  predicted_nwbv: number;
+  predicted_mmse: number;
+  ci_lower: number;
+  ci_upper: number;
+}
+
+export interface LongitudinalResponse {
+  subject_id: string;
+  visits_count: number;
+  total_followup_years: number;
+  annualized_brain_atrophy_pct: number;
+  annualized_mmse_change: number;
+  trajectory_type: 'STABLE_NORMAL' | 'TYPICAL_AGING' | 'ACCELERATED_ATROPHY' | 'RAPID_COGNITIVE_DECLINE';
+  trajectory_description: string;
+  conversion_risk_5year: number;
+  fitted_trajectory: FittedTrajectoryPoint[];
+  clinical_interpretation: string;
+}
+
+export interface ModelMetadata {
+  model_id: string;
+  name: string;
+  version: string;
+  target_variable: string;
+  algorithm: string;
+  training_dataset: string;
+  n_train: number;
+  n_features: number;
+  features: string[];
+  metrics: {
+    roc_auc: number;
+    pr_auc: number;
+    accuracy: number;
+    f1: number;
+    sensitivity: number;
+    specificity: number;
+    brier_score: number;
+  };
+  cv_method: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ModelEvaluation {
+  model_id: string;
+  name: string;
+  algorithm: string;
+  target_variable: string;
+  roc_curve: { fpr: number[]; tpr: number[]; thresholds: number[] };
+  pr_curve: { recall: number[]; precision: number[] };
+  confusion_matrix: {
+    matrix: Array<{ label: string; pred_control: number; pred_ad: number }>;
+    total_tested: number;
+    threshold: number;
+  };
+  calibration_curve: { prob_pred: number[]; prob_true: number[] };
+  feature_importances: Array<{ feature: string; importance: number; category: string; direction: string }>;
+  metrics: Record<string, number>;
+}
+
+export interface ResearchReportRequest {
+  subject_identifier: string;
+  clinical_inputs: Record<string, unknown>;
+  classification?: Record<string, unknown> | null;
+  cognitive_staging?: Record<string, unknown> | null;
+  longitudinal?: Record<string, unknown> | null;
+  investigator_notes?: string | null;
+}
+
+export interface ResearchReportResponse {
+  report_id: string;
+  generated_at: string;
+  subject_identifier: string;
+  title: string;
+  executive_summary: string;
+  content_markdown: string;
+  risk_profile: {
+    probability?: number;
+    risk_tier?: string;
+    predicted_stage?: string;
+  };
+  disclaimer: string;
+}
+
 // ── API functions ─────────────────────────────────────────────
 
 export const api = {
@@ -151,6 +325,31 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  },
+
+  predictions: {
+    models: () => apiFetch<ModelMetadata[]>('/api/predictions/models'),
+    evaluation: (modelId: string) => apiFetch<ModelEvaluation>(`/api/predictions/models/${modelId}/evaluation`),
+    classify: (payload: ClassificationRequest) =>
+      apiFetch<ClassificationResponse>('/api/predictions/classify', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    stage: (payload: CognitiveStagingRequest) =>
+      apiFetch<CognitiveStagingResponse>('/api/predictions/stage', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    longitudinal: (payload: LongitudinalRequest) =>
+      apiFetch<LongitudinalResponse>('/api/predictions/longitudinal', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    generateReport: (payload: ResearchReportRequest) =>
+      apiFetch<ResearchReportResponse>('/api/predictions/report', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   },
 
   literature: {

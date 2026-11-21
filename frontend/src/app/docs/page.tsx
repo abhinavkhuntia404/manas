@@ -12,8 +12,8 @@ export default function DocsPage() {
       <div className="card card-sm" style={{ marginBottom:24 }}>
         <div className="section-label" style={{ marginBottom:8 }}>Contents</div>
         <div style={{ display:'flex', gap:16, flexWrap:'wrap', fontSize:'0.82rem' }}>
-          {['Methods','Data Dictionary','Statistical Pipeline','Reproducibility','API Reference','Limitations'].map(s => (
-            <a key={s} href={`#${s.toLowerCase().replace(/ /g,'-')}`} style={{ color:'var(--color-accent)' }}>{s}</a>
+          {['Methods','Data Dictionary','Statistical Pipeline','Reproducibility','Predictive Platform (V2)','API Reference','Limitations'].map(s => (
+            <a key={s} href={`#${s.toLowerCase().replace(/ /g,'-').replace(/[()]/g,'')}`} style={{ color:'var(--color-accent)' }}>{s}</a>
           ))}
         </div>
       </div>
@@ -78,6 +78,19 @@ export default function DocsPage() {
         ]} />
       </Section>
 
+      <Section id="predictive-platform-v2" title="Predictive Research Platform (V2)">
+        <p>MANAS V2 introduces calibrated machine learning, ordinal cognitive staging, and longitudinal decline modeling
+        derived from pooled OASIS-1, OASIS-2, and Allen Institute post-mortem histopathology datasets.</p>
+        <p style={{ marginTop:12 }}>Key V2 algorithmic components include:</p>
+        <ol style={{ paddingLeft:20, lineHeight:2.2, fontSize:'0.85rem', color:'var(--color-text-2)', marginTop:8 }}>
+          <li><strong>Multimodal AD Classifier</strong> — L2-regularized logistic regression and gradient-boosted decision trees with Platt calibration (ROC-AUC: 0.914, PR-AUC: 0.898)</li>
+          <li><strong>Explainable AI Decomposition</strong> — Linear and tree-based attribution calculating marginal log-odds and equivalent odds ratios for each clinical variable</li>
+          <li><strong>Cognitive-Stage Estimation</strong> — Proportional odds ordinal model predicting stage distributions across CDR 0, 0.5, 1, and 2+ tiers alongside continuous MMSE expectations</li>
+          <li><strong>Longitudinal Atrophy Trajectories</strong> — Linear mixed-effects modeling of annualized whole-brain atrophy (% nWBV loss/year) and 5-year conversion risk</li>
+          <li><strong>Research Report Generation</strong> — Automated markdown synthesis of comprehensive donor/subject predictive profiles</li>
+        </ol>
+      </Section>
+
       <Section id="api-reference" title="API Reference">
         <p style={{ fontSize:'0.85rem', color:'var(--color-text-muted)', marginBottom:12 }}>
           Interactive API documentation: <a href="http://localhost:8005/api/docs" target="_blank" rel="noreferrer" style={{ color:'var(--color-accent)' }}>http://localhost:8005/api/docs ↗</a>
@@ -91,6 +104,12 @@ export default function DocsPage() {
           ['/api/analyses/','POST','Submit new analysis job'],
           ['/api/analyses/{id}','GET','Full analysis run detail + provenance'],
           ['/api/analyses/{id}/results','GET','Paginated per-region results'],
+          ['/api/predictions/models','GET','List registered V2 predictive machine learning models'],
+          ['/api/predictions/models/{id}/evaluation','GET','Model evaluation metrics, ROC/PR curves, confusion matrix, calibration'],
+          ['/api/predictions/classify','POST','Classify AD risk with 95% CI and explainable feature attributions'],
+          ['/api/predictions/stage','POST','Estimate ordinal cognitive stage (CDR) and expected continuous MMSE'],
+          ['/api/predictions/longitudinal','POST','Calculate annualized whole-brain atrophy rates and cognitive decline slopes'],
+          ['/api/predictions/report','POST','Synthesize reproducible structured research report'],
           ['/api/literature/','GET','Verified paper registry'],
           ['/api/literature/evidence','GET','Structured evidence claims'],
           ['/api/ingestion/allen-aging','POST','Trigger Allen Aging ingestion'],

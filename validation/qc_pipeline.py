@@ -48,9 +48,8 @@ class QCPipeline:
     # ------------------------------------------------------------------
 
     def validate_donors(self, df: pd.DataFrame) -> list[dict]:
+        """Validate donor data without crashing on incomplete input schemas."""
         results = []
-
-        # Check 1: Required columns present
         missing_cols = [c for c in REQUIRED_DONOR_COLS if c not in df.columns]
         if missing_cols:
             self._record("FAIL", "DATASET", None, "required_columns",
@@ -59,69 +58,44 @@ class QCPipeline:
             self._record("PASS", "DATASET", None, "required_columns",
                          "All required donor columns present", 0)
 
-        # Check 2: No duplicate donor IDs
-        dupes = df.duplicated(subset=["donor_id"]).sum()
-        if dupes > 0:
-            self._record("FAIL", "SUBJECT", None, "duplicate_donors",
-                         f"{dupes} duplicate donor_id values found", dupes)
-        else:
-            self._record("PASS", "SUBJECT", None, "duplicate_donors",
-                         "No duplicate donor IDs", 0)
+        # Each check is gated on the columns it actually needs. A failed
+        # schema check should produce a QC report, not a secondary KeyError.
+        if "donor_id" in df.columns:
+            dupes = int(df.duplicated(subset=["donor_id"]).sum())
+            self._record("FAIL" if dupes else "PASS", "SUBJECT", None,
+                         "duplicate_donors",
+                         f"{dupes} duplicate donor_id values found" if dupes else "No duplicate donor IDs", dupes)
 
-        # Check 3: Disease label completeness
-        missing_dx = df["dsm_iv_clinical_diagnosis"].isna().sum() + (df["dsm_iv_clinical_diagnosis"] == "").sum()
-        if missing_dx > 0:
-            self._record("WARNING", "SUBJECT", None, "missing_diagnosis",
-                         f"{missing_dx} donors missing dsm_iv_clinical_diagnosis", missing_dx)
-        else:
-            self._record("PASS", "SUBJECT", None, "missing_diagnosis",
-                         "All donors have a clinical diagnosis", 0)
+        dx_col = "dsm_iv_clinical_diagnosis"
+        if dx_col in df.columns:
+            dx = df[dx_col]
+            missing_dx = int((dx.isna() | dx.astype(str).str.strip().eq("")).sum())
+            self._record("WARNING" if missing_dx else "PASS", "SUBJECT", None,
+                         "missing_diagnosis",
+                         f"{missing_dx} donors missing {dx_col}" if missing_dx else "All donors have a clinical diagnosis", missing_dx)
+            invalid_dx = int((~dx.dropna().isin(VALID_DISEASE_VALUES)).sum())
+            self._record("WARNING" if invalid_dx else "PASS", "SUBJECT", None,
+                         "invalid_diagnosis_labels",
+                         f"{invalid_dx} donors have non-standard diagnosis labels" if invalid_dx else "All diagnosis labels are from controlled vocabulary", invalid_dx)
 
-        # Check 4: Valid disease labels
-        invalid_dx = df[~df["dsm_iv_clinical_diagnosis"].isin(VALID_DISEASE_VALUES)]["donor_id"].count()
-        if invalid_dx > 0:
-            self._record("WARNING", "SUBJECT", None, "invalid_diagnosis_labels",
-                         f"{invalid_dx} donors have non-standard diagnosis labels", invalid_dx)
-        else:
-            self._record("PASS", "SUBJECT", None, "invalid_diagnosis_labels",
-                         "All diagnosis labels are from controlled vocabulary", 0)
+        if "age" in df.columns:
+            unparseable_age = int(pd.to_numeric(df["age"].astype(str).str.extract(r"(\d+(?:\.\d+)?)")[0], errors="coerce").isna().sum())
+            self._record("WARNING" if unparseable_age else "PASS", "SUBJECT", None,
+                         "age_format",
+                         f"{unparseable_age} age values could not be parsed" if unparseable_age else "All donor age values are parseable", unparseable_age)
 
-        # Check 5: Age parseable
-        unparseable_age = 0
-        for val in df["age"]:
-            try:
-                float(str(val).replace("+", "").replace("-", "").strip()[:5])
-            except (ValueError, TypeError):
-                unparseable_age += 1
-        if unparseable_age > 0:
-            self._record("WARNING", "SUBJECT", None, "age_format",
-                         f"{unparseable_age} age values are non-numeric (e.g. '95-99', '100+') — will be treated as ranges",
-                         unparseable_age)
-        else:
-            self._record("PASS", "SUBJECT", None, "age_format", "All age values numeric", 0)
+        if "sex" in df.columns:
+            invalid_sex = int((~df["sex"].astype(str).str.upper().isin(["M", "F", "MALE", "FEMALE"])).sum())
+            self._record("WARNING" if invalid_sex else "PASS", "SUBJECT", None,
+                         "sex_values",
+                         f"{invalid_sex} donors have non-standard sex values" if invalid_sex else "All sex values are M or F", invalid_sex)
 
-        # Check 6: Sex values
-        invalid_sex = df[~df["sex"].isin(["M", "F"])]["donor_id"].count()
-        if invalid_sex > 0:
-            self._record("WARNING", "SUBJECT", None, "sex_values",
-                         f"{invalid_sex} donors have non-standard sex values", invalid_sex)
-        else:
-            self._record("PASS", "SUBJECT", None, "sex_values",
-                         "All sex values are M or F", 0)
-
-        # Check 7: Braak score range
         if "braak" in df.columns:
-            try:
-                braak_vals = pd.to_numeric(df["braak"], errors="coerce")
-                out_of_range = ((braak_vals < 0) | (braak_vals > 6)).sum()
-                if out_of_range > 0:
-                    self._record("WARNING", "SUBJECT", None, "braak_range",
-                                 f"{out_of_range} Braak scores outside 0-6 range", out_of_range)
-                else:
-                    self._record("PASS", "SUBJECT", None, "braak_range",
-                                 f"All Braak scores in valid range 0-6 (n={braak_vals.notna().sum()})", 0)
-            except Exception:
-                pass
+            braak_vals = pd.to_numeric(df["braak"], errors="coerce")
+            out_of_range = int(((braak_vals < 0) | (braak_vals > 6)).sum())
+            self._record("WARNING" if out_of_range else "PASS", "SUBJECT", None,
+                         "braak_range",
+                         f"{out_of_range} Braak scores outside 0-6 range" if out_of_range else f"All Braak scores in valid range 0-6 (n={braak_vals.notna().sum()})", out_of_range)
 
         return results
 
