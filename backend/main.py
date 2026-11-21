@@ -30,9 +30,15 @@ logger = logging.getLogger("manas")
 async def lifespan(app: FastAPI):
     logger.info(f"MANAS {settings.app_version} starting in {settings.environment} mode")
     if settings.environment == "development":
-        from backend.database.session import create_tables
-        create_tables()
-        logger.info("Database tables verified/created.")
+        try:
+            from backend.database.session import create_tables
+            create_tables()
+            logger.info("Database tables verified/created.")
+        except Exception as db_err:
+            logger.warning(
+                f"Could not connect to database on startup ({db_err}). "
+                "Server starting in degraded/offline mode."
+            )
     yield
 
 limiter = Limiter(key_func=get_remote_address)
